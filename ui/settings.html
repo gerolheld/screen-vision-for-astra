@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Screen Vision</title>
+  <script src="http://astra-plugin.localhost/bridge/astra-bridge.js"></script>
+  <style>
+    :root { color-scheme: normal; }
+    html, body { background: transparent; }
+    body {
+      color-scheme: light dark;
+      margin: 0;
+      padding: 16px;
+      box-sizing: border-box;
+      font-family: var(--font-sans, system-ui, sans-serif);
+      color: var(--color-text, #eee);
+      user-select: none;
+    }
+    * { box-sizing: border-box; scrollbar-width: none; }
+    *::-webkit-scrollbar { display: none; }
+
+    h2 {
+      margin: 0 0 4px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .sub {
+      margin: 0 0 14px;
+      font-size: 12px;
+      color: var(--color-text-muted, #9a9a9a);
+    }
+
+    .field { margin-bottom: 10px; }
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: var(--color-text-muted, #9a9a9a);
+    }
+    input {
+      width: 100%;
+      padding: 8px 10px;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--color-text, #eee);
+      background: var(--color-overlay, rgba(255, 255, 255, 0.06));
+      border: 1px solid var(--edge-control, var(--color-border, #444));
+      border-radius: var(--radius-md, 8px);
+      outline: none;
+      user-select: text;
+    }
+    input:focus {
+      border-color: transparent;
+      box-shadow: 0 0 0 2px var(--edge-focus, var(--color-accent, #6ea8fe));
+    }
+    input::placeholder { color: var(--color-text-muted, #777); }
+
+    .row { display: flex; gap: 8px; margin-top: 6px; }
+    button {
+      flex: 1;
+      padding: 8px 12px;
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: var(--radius-md, 8px);
+      border: 1px solid var(--edge-control, var(--color-border, #444));
+      background: var(--color-surface-hover, rgba(255, 255, 255, 0.08));
+      color: var(--color-text, #eee);
+    }
+    button:hover { background: var(--color-overlay, rgba(255, 255, 255, 0.12)); }
+    button.primary {
+      background: var(--color-accent, #6ea8fe);
+      border-color: transparent;
+      color: #0b0b0b;
+    }
+    button:disabled { opacity: 0.5; cursor: default; }
+
+    #status {
+      margin-top: 10px;
+      font-size: 12px;
+      min-height: 16px;
+      color: var(--color-text-muted, #9a9a9a);
+      white-space: pre-wrap;
+    }
+    #status.ok { color: var(--color-accent, #6ea8fe); }
+    #status.err { color: #ff7b72; }
+  </style>
+</head>
+<body>
+  <h2>Screen Vision</h2>
+  <p class="sub">Настройки модели, которая смотрит на ваш экран.</p>
+
+  <div class="field">
+    <label for="base_url">API Base URL</label>
+    <input id="base_url" type="text" placeholder="http://localhost:11434/v1" />
+  </div>
+
+  <div class="field">
+    <label for="api_key">API Key</label>
+    <input id="api_key" type="password" placeholder="Пусто для локального Ollama" />
+  </div>
+
+  <div class="field">
+    <label for="model">Vision model</label>
+    <input id="model" type="text" placeholder="gpt-4o / qwen2.5-vl / llava" />
+  </div>
+
+  <div class="row">
+    <button id="test" type="button">Проверить</button>
+    <button id="save" type="button" class="primary">Сохранить</button>
+  </div>
+
+  <div id="status"></div>
+
+  <script>
+    function collect() {
+      return {
+        base_url: document.getElementById("base_url").value.trim(),
+        api_key: document.getElementById("api_key").value.trim(),
+        model: document.getElementById("model").value.trim()
+      };
+    }
+
+    function setStatus(text, kind) {
+      var el = document.getElementById("status");
+      el.textContent = text;
+      el.className = kind || "";
+    }
+
+    async function load() {
+      try {
+        var s = await astra.callBackend("get_settings", {});
+        document.getElementById("base_url").value = s.base_url || "";
+        document.getElementById("api_key").value = s.api_key || "";
+        document.getElementById("model").value = s.model || "";
+      } catch (e) {
+        setStatus("Не удалось загрузить настройки: " + e, "err");
+      }
+    }
+
+    async function save() {
+      var btn = document.getElementById("save");
+      btn.disabled = true;
+      setStatus("Сохраняю…");
+      try {
+        var r = await astra.callBackend("save_settings", collect());
+        setStatus(r.ok ? "Сохранено" : "Ошибка: " + r.error, r.ok ? "ok" : "err");
+      } catch (e) {
+        setStatus("Ошибка: " + e, "err");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function test() {
+      var btn = document.getElementById("test");
+      btn.disabled = true;
+      setStatus("Проверяю…");
+      try {
+        var r = await astra.callBackend("test_connection", collect());
+        setStatus(r.ok ? "OK: " + r.message : "Ошибка: " + r.error, r.ok ? "ok" : "err");
+      } catch (e) {
+        setStatus("Ошибка: " + e, "err");
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById("save").addEventListener("click", save);
+    document.getElementById("test").addEventListener("click", test);
+    load();
+  </script>
+</body>
+</html>

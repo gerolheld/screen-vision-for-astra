@@ -1,0 +1,18 @@
+[plugin]
+id = "screen-vision"
+name = "Screen Vision"
+version = "0.1.0"
+description = "Gives Astra sight: captures the screen and answers questions about what is visible, using any OpenAI-compatible vision model."
+author = "gerolheld"
+license = "MIT"
+
+[entry]
+command = "python"
+args = ["-m", "src.plugin"]
+runtimes = ["python"]
+
+[capabilities]
+tools = true
+ui_contributions = true
+
+[permissions]
